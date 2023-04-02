@@ -12,6 +12,7 @@ from ..utils import (
     GeoRestrictedError,
     InAdvancePagedList,
     OnDemandPagedList,
+    determine_ext
     filter_dict,
     float_or_none,
     format_field,
@@ -835,14 +836,26 @@ class BiliIntlBaseIE(InfoExtractor):
             sub_url = sub.get('url')
             if not sub_url:
                 continue
-            sub_data = self._download_json(
-                sub_url, ep_id or aid, errnote='Unable to download subtitles', fatal=False,
-                note='Downloading subtitles%s' % f' for {sub["lang"]}' if sub.get('lang') else '')
+            ext = determine_ext(sub_url)
+            msg = (
+                'Unable to download subtitles',
+                'Downloading subtitles' + f' for {sub["lang"]}' if sub.get('lang') else '')
+            if ext == 'ass':
+                sub_data = self._download_webpage(
+                    sub_url, ep_id or aid, errnote=msg[0], fatal=False,
+                    encoding='utf-8-sig', note=msg[1])
+            else:
+                # maybe consider other types?
+                sub_data = self._download_json(
+                    sub_url, ep_id or aid, errnote=msg[0], fatal=False, note=msg[1])
+                if sub_data:
+                    sub_data = self.json2srt(sub_data) 
+                    ext = 'srt'
             if not sub_data:
                 continue
             subtitles.setdefault(sub.get('lang_key', 'en'), []).append({
-                'ext': 'srt',
-                'data': self.json2srt(sub_data)
+                'ext': 'ext',
+                'data': sub_data
             })
         return subtitles
 

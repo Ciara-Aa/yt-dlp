@@ -12,7 +12,7 @@ from ..utils import (
     GeoRestrictedError,
     InAdvancePagedList,
     OnDemandPagedList,
-    determine_ext
+    determine_ext,
     filter_dict,
     float_or_none,
     format_field,

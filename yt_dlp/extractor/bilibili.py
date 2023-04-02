@@ -844,7 +844,7 @@ class BiliIntlBaseIE(InfoExtractor):
                 sub_data = self._download_webpage(
                     sub_url, ep_id or aid, errnote=msg[0], fatal=False,
                     encoding='utf-8-sig', note=msg[1])
-                else:
+            else:
                 # maybe consider other types?
                 sub_data = self._download_json(
                     sub_url, ep_id or aid, errnote=msg[0], fatal=False, note=msg[1])

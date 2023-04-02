@@ -854,7 +854,7 @@ class BiliIntlBaseIE(InfoExtractor):
             if not sub_data:
                 continue
             subtitles.setdefault(sub.get('lang_key', 'en'), []).append({
-                'ext': 'ass',
+                'ext': ext,
                 'data': sub_data
             })
         return subtitles

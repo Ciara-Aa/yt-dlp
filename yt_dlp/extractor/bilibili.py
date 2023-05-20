@@ -897,27 +897,45 @@ class BiliIntlBaseIE(InfoExtractor):
             sub_url = sub.get('url')
             if not sub_url:
                 continue
-            ext = determine_ext(sub_url)
+            sub_ext = determine_ext(sub_url)
             msg = (
                 'Unable to download subtitles',
-                'Downloading subtitles' + f' for {sub["lang"]}' if sub.get('lang') else '')
-            if ext == 'ass':
+                'Downloading subtitles' + f' for {sub["lang"]}' if sub.get('lang') else ''
+            )
+            if sub_ext == 'ass':
                 sub_data = self._download_webpage(
-                    sub_url, ep_id or aid, errnote=msg[0], fatal=False,
-                    encoding='utf-8-sig', note=msg[1])
+                    sub_url, ep_id or aid, note=msg[1], errnote=msg[0], fatal=False, encoding='utf-8-sig')
             else:
-                # maybe consider other types?
                 sub_data = self._download_json(
                     sub_url, ep_id or aid, errnote=msg[0], fatal=False, note=msg[1])
                 if sub_data:
+                    sub_ext = 'srt'
                     sub_data = self.json2srt(sub_data)
-                    ext = 'srt'
+
             if not sub_data:
                 continue
+
             subtitles.setdefault(sub.get('lang_key', 'en'), []).append({
-                'ext': ext,
+                'ext': 'srt',
                 'data': sub_data
             })
+
+        for video_sub in sub_json.get('video_subtitle') or []:
+            sub_lang = video_sub.get('lang_key')
+
+            if not subtitles.get(sub_lang):
+                subtitles.setdefault(sub_lang, [])
+
+            if video_sub.get('srt'):
+                subtitles[sub_lang].append({
+                    'ext': 'srt',
+                    'url': self.json2srt(traverse_obj(video_sub, ('srt', 'url')))
+                })
+            if video_sub.get('ass'):
+                subtitles[sub_lang].append({
+                    'ext': 'ass',
+                    'url': traverse_obj(video_sub, ('ass', 'url'))
+                })
         return subtitles
 
     def _get_formats(self, *, ep_id=None, aid=None):
@@ -1031,7 +1049,7 @@ class BiliIntlIE(BiliIntlBaseIE):
             'title': 'E3 - Who?',
             'thumbnail': r're:^https://pic\.bstarstatic\.com/ogv/.+\.png$',
             'episode_number': 3,
-            'description': 'md5:e1a775e71a35c43f141484715470ad09',
+            'description': 'md5:3bd8777b681690d096e014d592116e7c',
             'episode': 'Episode 3',
             'upload_date': '20211219',
             'timestamp': 1639928700,
@@ -1113,7 +1131,7 @@ class BiliIntlIE(BiliIntlBaseIE):
             'upload_date': '20221108',
             'title': 'That Time I Got Reincarnated as a Slime: Scarlet Bond - Official Trailer 3| AnimeStan - Bstation',
             'comment_count': int,
-            'thumbnail': 'https://pic.bstarstatic.com/ugc/f6c363659efd2eabe5683fbb906b1582.jpg',
+            'thumbnail': r're:https?://pic(?:[\.-])bstarstatic\.(?:akamaized\.net|com)/ugc/f6c363659efd2eabe5683fbb906b1582\.jpg',
         },
         'params': {
             'getcomments': True
@@ -1267,6 +1285,9 @@ class BiliIntlIE(BiliIntlBaseIE):
             'formats': self._get_formats(ep_id=ep_id, aid=aid),
             'subtitles': self.extract_subtitles(ep_id=ep_id, aid=aid),
             'chapters': chapters,
+            'http_headers': {
+                'referer': url
+            },
             '__post_extractor': self.extract_comments(video_id, ep_id)
         }
 
